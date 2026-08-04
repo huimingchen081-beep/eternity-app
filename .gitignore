@@ -78,8 +78,9 @@ unlinked_spec.ds
 **/android/app/upload-keystore.jks
 **/android/key.properties
 
-# iOS secrets (keep all out of repo; Codemagic reads from environment variables)
-**/ios/secrets/
+# iOS secrets (track base64 for manual signing; keep raw binaries out)
+**/ios/secrets/*
+!**/ios/secrets/*.base64
 
 # Web related
 lib/generated_plugin_registrant.dart
