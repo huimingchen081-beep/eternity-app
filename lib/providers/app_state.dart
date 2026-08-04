@@ -4,12 +4,11 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../models/planet.dart';
 import '../models/memory_entry.dart';
 import '../services/storage_service.dart';
-import '../services/iap_service.dart';
+import '../services/notification_service.dart';
 import '../utils/constants.dart';
 
 class AppState extends ChangeNotifier {
   final StorageService storage = StorageService();
-  final IapService iap = IapService();
 
   // Language
   String _language = 'en';
@@ -43,10 +42,10 @@ class AppState extends ChangeNotifier {
   Future<void> init() async {
     final prefs = await SharedPreferences.getInstance();
     _language = prefs.getString('language') ?? _getSystemLanguage();
-    _hasPurchased = prefs.getBool('purchased') ?? false;
+    // Paid app: always full version
+    _hasPurchased = true;
 
     await storage.init();
-    await iap.init();
 
     // Load or generate planets
     _planets = await storage.loadPlanets();
@@ -61,12 +60,6 @@ class AppState extends ChangeNotifier {
     _litCount = await storage.getLitPlanetCount();
     _storageUsedMB = await storage.getStorageUsedMB();
     _todayEntries = await _countTodayEntries();
-
-    // Sync purchase state with IAP
-    if (iap.isPurchased && !_hasPurchased) {
-      _hasPurchased = true;
-      await prefs.setBool('purchased', true);
-    }
 
     notifyListeners();
   }
@@ -86,29 +79,7 @@ class AppState extends ChangeNotifier {
     return supported.contains(langCode) ? langCode : 'en';
   }
 
-  // --- Purchase ---
-  Future<bool> unlockFullVersion() async {
-    final success = await iap.purchase();
-    if (success || iap.isPurchased) {
-      _hasPurchased = true;
-      final prefs = await SharedPreferences.getInstance();
-      await prefs.setBool('purchased', true);
-      notifyListeners();
-      return true;
-    }
-    return false;
-  }
-
-  Future<bool> restorePurchase() async {
-    final restored = await iap.restore();
-    if (restored) {
-      _hasPurchased = true;
-      final prefs = await SharedPreferences.getInstance();
-      await prefs.setBool('purchased', true);
-      notifyListeners();
-    }
-    return restored;
-  }
+  // --- Purchase (paid app, always unlocked) ---
 
   // --- Planet Operations ---
   Future<Planet?> getNextDarkPlanet() async {
@@ -125,7 +96,6 @@ class AppState extends ChangeNotifier {
 
   // --- Save Memory ---
   Future<MemoryEntry?> saveTextMemo(String text) async {
-    if (!_hasPurchased) return null;
     if (text.trim().isEmpty) return null;
 
     final planet = await getNextDarkPlanet();
@@ -244,6 +214,7 @@ class AppState extends ChangeNotifier {
   Future<void> setReminderEnabled(bool enabled) async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setBool('reminder_enabled', enabled);
+    await NotificationService.toggleNotification(enabled);
   }
 
   Future<int> getReminderHour() async {
@@ -254,5 +225,9 @@ class AppState extends ChangeNotifier {
   Future<void> setReminderHour(int hour) async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setInt('reminder_hour', hour);
+    final enabled = prefs.getBool('reminder_enabled') ?? true;
+    if (enabled) {
+      await NotificationService.scheduleDailyGreeting(hour: hour);
+    }
   }
 }

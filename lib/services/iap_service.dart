@@ -14,24 +14,25 @@ class IapService {
   bool get initialized => _initialized;
 
   Future<void> init() async {
-    _isAvailable = await _iap.isAvailable();
-    if (!_isAvailable) return;
+    try {
+      _isAvailable = await _iap.isAvailable();
+      if (!_isAvailable) return;
 
-    const Set<String> productIds = {
-      AppConstants.iapAppleProductId,
-      AppConstants.iapGoogleProductId,
-    };
+      const Set<String> productIds = {
+        AppConstants.iapAppleProductId,
+        AppConstants.iapGoogleProductId,
+      };
 
-    final response = await _iap.queryProductDetails(productIds);
-    _products = response.productDetails;
+      final response = await _iap.queryProductDetails(productIds);
+      _products = response.productDetails;
 
-    // Check if already purchased (non-consumable)
-    await _restorePurchases();
-
-    // Listen for purchase updates
-    _iap.purchaseStream.listen(_onPurchaseUpdate);
-
-    _initialized = true;
+      await _restorePurchases();
+      _iap.purchaseStream.listen(_onPurchaseUpdate);
+      _initialized = true;
+    } catch (e) {
+      _isAvailable = false;
+      _initialized = true;
+    }
   }
 
   Future<void> _restorePurchases() async {

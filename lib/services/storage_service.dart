@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'dart:math';
 import 'package:sqflite/sqflite.dart';
 import 'package:path/path.dart';
 import 'package:path_provider/path_provider.dart';
@@ -15,13 +16,40 @@ class StorageService {
     _db ??= await openDatabase(
       join(await getDatabasesPath(), 'eternity.db'),
       onCreate: _onCreate,
-      version: 1,
+      onUpgrade: _onUpgrade,
+      version: 2,
     );
     final appDir = await getApplicationDocumentsDirectory();
     _mediaDir = join(appDir.path, 'eternity_media');
     final dir = Directory(_mediaDir!);
     if (!await dir.exists()) {
       await dir.create(recursive: true);
+    }
+  }
+
+  Future<void> _onUpgrade(Database db, int oldVersion, int newVersion) async {
+    if (oldVersion < 2) {
+      // Add floating animation columns to planets table
+      await db.execute('ALTER TABLE planets ADD COLUMN floatPhase REAL DEFAULT 0.0');
+      await db.execute('ALTER TABLE planets ADD COLUMN floatSpeed REAL DEFAULT 1.0');
+      await db.execute('ALTER TABLE planets ADD COLUMN floatAmplitude REAL DEFAULT 15.0');
+
+      // Populate float values for existing planets using deterministic per-planet random
+      final planets = await db.query('planets');
+      for (final p in planets) {
+        final id = p['id'] as String;
+        final rng = Random(id.hashCode);
+        await db.update(
+          'planets',
+          {
+            'floatPhase': rng.nextDouble() * 2 * pi,
+            'floatSpeed': 0.5 + rng.nextDouble() * 1.5,
+            'floatAmplitude': 10.0 + rng.nextDouble() * 15.0,
+          },
+          where: 'id = ?',
+          whereArgs: [id],
+        );
+      }
     }
   }
 
@@ -32,7 +60,10 @@ class StorageService {
         x REAL, y REAL, z REAL,
         radius REAL, isLit INTEGER,
         litAt TEXT, entryCount INTEGER DEFAULT 0,
-        colorHex TEXT
+        colorHex TEXT,
+        floatPhase REAL DEFAULT 0.0,
+        floatSpeed REAL DEFAULT 1.0,
+        floatAmplitude REAL DEFAULT 10.0
       )
     ''');
     await db.execute('''
@@ -120,11 +151,13 @@ class StorageService {
     String audioLanguage,
     String language,
   ) async {
+    // Copy audio from cache to persistent storage
+    final persistedPath = await persistFile(audioPath, prefix: 'voice');
     final entry = MemoryEntry(
       id: _uuid.v4(),
       planetId: planetId,
       type: MemoryType.voice,
-      audioPath: audioPath,
+      audioPath: persistedPath,
       audioTranscript: transcript,
       audioLanguage: audioLanguage,
       createdAt: DateTime.now(),
@@ -137,11 +170,13 @@ class StorageService {
 
   Future<MemoryEntry> saveImageEntry(
       String planetId, List<String> imagePaths, String language) async {
+    // Copy images from cache to persistent storage
+    final persistedPaths = await persistImagePaths(imagePaths);
     final entry = MemoryEntry(
       id: _uuid.v4(),
       planetId: planetId,
       type: MemoryType.image,
-      imagePaths: imagePaths,
+      imagePaths: persistedPaths,
       createdAt: DateTime.now(),
       language: language,
     );
@@ -152,11 +187,13 @@ class StorageService {
 
   Future<MemoryEntry> saveVideoEntry(
       String planetId, String videoPath, String language) async {
+    // Copy video from cache to persistent storage
+    final persistedPath = await persistFile(videoPath, prefix: 'video');
     final entry = MemoryEntry(
       id: _uuid.v4(),
       planetId: planetId,
       type: MemoryType.video,
-      videoPath: videoPath,
+      videoPath: persistedPath,
       createdAt: DateTime.now(),
       language: language,
     );
@@ -175,16 +212,21 @@ class StorageService {
     String? videoPath,
     String language = 'en',
   }) async {
+    // Persist media files
+    final persistedImages = images != null ? await persistImagePaths(images) : null;
+    final persistedAudio = audioPath != null ? await persistFile(audioPath, prefix: 'voice') : null;
+    final persistedVideo = videoPath != null ? await persistFile(videoPath, prefix: 'video') : null;
+
     final entry = MemoryEntry(
       id: _uuid.v4(),
       planetId: planetId,
       type: MemoryType.mixed,
       textContent: text,
-      imagePaths: images,
-      audioPath: audioPath,
+      imagePaths: persistedImages,
+      audioPath: persistedAudio,
       audioTranscript: transcript,
       audioLanguage: audioLanguage,
-      videoPath: videoPath,
+      videoPath: persistedVideo,
       createdAt: DateTime.now(),
       language: language,
     );
@@ -227,6 +269,31 @@ class StorageService {
 
   String getMediaPath(String filename) {
     return join(_mediaDir!, filename);
+  }
+
+  /// Copy a file from cache/temp directory to persistent storage.
+  /// Returns the new persistent path. If the source is already in _mediaDir, returns as-is.
+  Future<String> persistFile(String sourcePath, {String prefix = 'media'}) async {
+    // Already in persistent storage?
+    if (sourcePath.startsWith(_mediaDir!)) return sourcePath;
+
+    final sourceFile = File(sourcePath);
+    if (!await sourceFile.exists()) return sourcePath; // Can't copy non-existent file
+
+    final ext = sourcePath.contains('.') ? sourcePath.substring(sourcePath.lastIndexOf('.')) : '';
+    final destPath = join(_mediaDir!, '${prefix}_${_uuid.v4()}$ext');
+    await sourceFile.copy(destPath);
+    return destPath;
+  }
+
+  /// Copy multiple image paths to persistent storage.
+  Future<List<String>> persistImagePaths(List<String> paths) async {
+    final result = <String>[];
+    for (final p in paths) {
+      final persisted = await persistFile(p, prefix: 'img');
+      result.add(persisted);
+    }
+    return result;
   }
 
   Future<int> getStorageUsedMB() async {

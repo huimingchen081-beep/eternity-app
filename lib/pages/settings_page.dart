@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import '../providers/app_state.dart';
 import '../utils/constants.dart';
+import 'usage_guide_page.dart';
 
 class SettingsPage extends StatelessWidget {
   const SettingsPage({super.key});
@@ -24,48 +26,16 @@ class SettingsPage extends StatelessWidget {
           body: ListView(
             padding: const EdgeInsets.all(16),
             children: [
-              // Purchase status
+              // App info
               _buildSectionTitle(
-                  appState.language == 'zh' ? '购买状态' : 'Purchase'),
+                  appState.language == 'zh' ? '应用信息' : 'App Info'),
               _buildInfoCard([
                 _InfoRow(
-                  icon: Icons.shopping_cart_outlined,
+                  icon: Icons.star_outlined,
                   label:
                       appState.language == 'zh' ? '版本' : 'Version',
-                  value: appState.hasPurchased
-                      ? (appState.language == 'zh' ? '完整版' : 'Full Version')
-                      : (appState.language == 'zh' ? '免费版' : 'Free'),
+                  value: appState.language == 'zh' ? '完整版' : 'Full Version',
                 ),
-                if (!appState.hasPurchased)
-                  _InfoRow(
-                    icon: Icons.lock_outline,
-                    label:
-                        appState.language == 'zh' ? '解锁价格' : 'Price',
-                    value: '\$1.99',
-                    trailing: ElevatedButton(
-                      onPressed: () => appState.unlockFullVersion(),
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: const Color(0xFF4FC3F7),
-                        foregroundColor: const Color(0xFF050510),
-                      ),
-                      child: Text(
-                        appState.language == 'zh' ? '购买' : 'Buy',
-                      ),
-                    ),
-                  ),
-                if (!appState.hasPurchased)
-                  _InfoRow(
-                    icon: Icons.restore,
-                    label: appState.language == 'zh' ? '恢复购买' : 'Restore',
-                    value: '',
-                    trailing: TextButton(
-                      onPressed: () => appState.restorePurchase(),
-                      child: Text(
-                        appState.language == 'zh' ? '恢复' : 'Restore',
-                        style: const TextStyle(color: Color(0xFF4FC3F7)),
-                      ),
-                    ),
-                  ),
               ]),
 
               const SizedBox(height: 16),
@@ -103,6 +73,27 @@ class SettingsPage extends StatelessWidget {
                   appState.language == 'zh' ? '关于' : 'About'),
               _buildInfoCard([
                 _InfoRow(
+                  icon: Icons.menu_book_outlined,
+                  label: appState.language == 'zh' ? '使用方法' : 'How to Use',
+                  value: '',
+                  trailing: TextButton(
+                    onPressed: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => UsageGuidePage(
+                            language: appState.language,
+                          ),
+                        ),
+                      );
+                    },
+                    child: Text(
+                      appState.language == 'zh' ? '查看' : 'View',
+                      style: const TextStyle(color: Color(0xFF4FC3F7)),
+                    ),
+                  ),
+                ),
+                _InfoRow(
                   icon: Icons.info_outline,
                   label: appState.language == 'zh' ? '版本' : 'Version',
                   value: '1.0.0',
@@ -112,7 +103,11 @@ class SettingsPage extends StatelessWidget {
                   label: appState.language == 'zh' ? '隐私政策' : 'Privacy Policy',
                   value: '',
                   trailing: TextButton(
-                    onPressed: () {},
+                    onPressed: () => _showPrivacyDialog(
+                      context,
+                      AppConstants.privacyUrl,
+                      appState.language,
+                    ),
                     child: const Text('查看',
                         style: TextStyle(color: Color(0xFF4FC3F7))),
                   ),
@@ -162,6 +157,80 @@ class SettingsPage extends StatelessWidget {
       default:
         return 'Settings';
     }
+  }
+
+  static void _showPrivacyDialog(
+    BuildContext context,
+    String url,
+    String lang,
+  ) {
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: const Color(0xFF0D0D2A),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(16),
+          side: BorderSide(color: Colors.white.withValues(alpha: 0.1)),
+        ),
+        title: Text(
+          lang == 'zh' ? '隐私政策' : 'Privacy Policy',
+          style: const TextStyle(color: Colors.white),
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: Colors.white.withValues(alpha: 0.05),
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: SelectableText(
+                url,
+                style: const TextStyle(color: Colors.white54, fontSize: 13),
+              ),
+            ),
+            const SizedBox(height: 12),
+            Text(
+              lang == 'zh'
+                  ? '请复制链接后在浏览器中打开'
+                  : 'Copy the link and open in browser',
+              style: const TextStyle(color: Colors.white38, fontSize: 12),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: Text(
+              lang == 'zh' ? '关闭' : 'Close',
+              style: const TextStyle(color: Colors.white54),
+            ),
+          ),
+          ElevatedButton.icon(
+            onPressed: () {
+              Clipboard.setData(ClipboardData(text: url));
+              Navigator.pop(ctx);
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: Text(
+                    lang == 'zh' ? '链接已复制到剪贴板' : 'Link copied to clipboard',
+                  ),
+                  duration: const Duration(seconds: 2),
+                  behavior: SnackBarBehavior.floating,
+                ),
+              );
+            },
+            icon: const Icon(Icons.copy, size: 16),
+            label: Text(lang == 'zh' ? '复制链接' : 'Copy'),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: const Color(0xFF4FC3F7),
+              foregroundColor: const Color(0xFF050510),
+            ),
+          ),
+        ],
+      ),
+    );
   }
 }
 

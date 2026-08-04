@@ -10,7 +10,7 @@ import '../services/asr_service.dart';
 class InputBar extends StatefulWidget {
   final String language;
   final bool hasPurchased;
-  final Function(String text) onTextSubmit;
+  final Future<void> Function(String text) onTextSubmit;
   final Function(List<String> imagePaths) onImageSubmit;
   final Function(String videoPath) onVideoSubmit;
   final Function(String audioPath, String transcript, String audioLang) onVoiceSubmit;
@@ -42,6 +42,20 @@ class _InputBarState extends State<InputBar> {
   bool _isProcessing = false;
   bool _showRecordingUI = false;
   int _recordingSeconds = 0;
+  bool _hasText = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _textController.addListener(() {
+      final hasText = _textController.text.trim().isNotEmpty;
+      if (hasText != _hasText) {
+        setState(() {
+          _hasText = hasText;
+        });
+      }
+    });
+  }
 
   @override
   void dispose() {
@@ -51,13 +65,30 @@ class _InputBarState extends State<InputBar> {
     super.dispose();
   }
 
-  void _submitText() {
+  Future<void> _submitText() async {
     final text = _textController.text.trim();
     if (text.isEmpty) return;
 
-    widget.onTextSubmit(text);
+    // Clear input immediately for responsive feel, but keep the text in case save fails
+    final savedText = text;
     _textController.clear();
     _focusNode.unfocus();
+
+    try {
+      await widget.onTextSubmit(savedText);
+    } catch (e) {
+      // Restore text if save failed
+      _textController.text = savedText;
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('发送失败，请重试'),
+            duration: const Duration(seconds: 2),
+            backgroundColor: Colors.red.shade800,
+          ),
+        );
+      }
+    }
   }
 
   Future<void> _pickImages() async {
@@ -158,10 +189,6 @@ class _InputBarState extends State<InputBar> {
 
   @override
   Widget build(BuildContext context) {
-    if (!widget.hasPurchased) {
-      return _buildPurchasePrompt();
-    }
-
     return Container(
       decoration: BoxDecoration(
         gradient: LinearGradient(
@@ -174,20 +201,29 @@ class _InputBarState extends State<InputBar> {
           ],
         ),
       ),
-      padding: EdgeInsets.only(
+      padding: const EdgeInsets.only(
         left: 12,
         right: 12,
         top: 8,
-        bottom: MediaQuery.of(context).padding.bottom + 8,
+        bottom: 8,
       ),
-      child: _showRecordingUI ? _buildRecordingUI() : _buildInputRow(),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          // DEBUG: Purchase prompt hidden for testing
+          // if (!widget.hasPurchased)
+          //   Padding(...),
+          // Input area
+          _showRecordingUI ? _buildRecordingUI() : _buildInputRow(),
+        ],
+      ),
     );
   }
 
   Widget _buildInputRow() {
     return Row(
       children: [
-        // Upload buttons
+        // Upload buttons - always show for testing
         _ActionButton(
           icon: Icons.image_outlined,
           onTap: _pickImages,
@@ -200,10 +236,9 @@ class _InputBarState extends State<InputBar> {
           icon: Icons.mic_none,
           onTap: _startRecording,
         ),
-
         const SizedBox(width: 8),
 
-        // Text input
+        // Text input - always available
         Expanded(
           child: Container(
             decoration: BoxDecoration(
@@ -228,13 +263,15 @@ class _InputBarState extends State<InputBar> {
                       contentPadding:
                           const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                     ),
-                    onSubmitted: (_) => _submitText(),
+                    onSubmitted: (_) {
+                      _submitText();
+                    },
                   ),
                 ),
                 IconButton(
                   icon: const Icon(Icons.send_rounded, color: Color(0xFF4FC3F7)),
-                  onPressed: _textController.text.trim().isNotEmpty
-                      ? _submitText
+                  onPressed: _hasText
+                      ? () => _submitText()
                       : null,
                 ),
               ],
@@ -326,36 +363,11 @@ class _InputBarState extends State<InputBar> {
     );
   }
 
-  Widget _buildPurchasePrompt() {
-    return Container(
-      width: double.infinity,
-      padding: EdgeInsets.only(
-        bottom: MediaQuery.of(context).padding.bottom + 8,
-        left: 16,
-        right: 16,
-        top: 12,
-      ),
-      decoration: const BoxDecoration(
-        gradient: LinearGradient(
-          begin: Alignment.topCenter,
-          end: Alignment.bottomCenter,
-          colors: [Color(0x00050510), Color(0xEE050510)],
-        ),
-      ),
-      child: ElevatedButton(
-        onPressed: widget.onPurchaseTap,
-        style: ElevatedButton.styleFrom(
-          backgroundColor: const Color(0xFF4FC3F7),
-          foregroundColor: const Color(0xFF050510),
-          padding: const EdgeInsets.symmetric(vertical: 14),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(12),
-          ),
-        ),
-        child: const Text(
-          'Unlock Full Version',
-          style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
-        ),
+  void _showPurchaseHint() {
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text('购买完整版可添加图片、视频和语音'),
+        duration: Duration(seconds: 2),
       ),
     );
   }
@@ -389,8 +401,9 @@ class _InputBarState extends State<InputBar> {
 class _ActionButton extends StatelessWidget {
   final IconData icon;
   final VoidCallback onTap;
+  final Color? color;
 
-  const _ActionButton({required this.icon, required this.onTap});
+  const _ActionButton({required this.icon, required this.onTap, this.color});
 
   @override
   Widget build(BuildContext context) {
@@ -405,7 +418,7 @@ class _ActionButton extends StatelessWidget {
             shape: BoxShape.circle,
             color: Colors.white.withValues(alpha: 0.08),
           ),
-          child: Icon(icon, color: Colors.white70, size: 22),
+          child: Icon(icon, color: color ?? Colors.white70, size: 22),
         ),
       ),
     );

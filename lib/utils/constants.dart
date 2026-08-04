@@ -1,6 +1,6 @@
 class AppConstants {
   static const String appName = 'Eternity';
-  static const String appNameCN = '永生';
+  static const String appNameCN = '记忆永恒';
   static const String packageName = 'com.huiqin.eternity';
 
   // IAP Products
@@ -15,11 +15,10 @@ class AppConstants {
   static const int maxAudioSeconds = 300;
   static const int maxLocalStorageMB = 500;
 
-  // Volcano Engine ASR
-  // ⚠️ Replace with your actual Volcano Engine credentials before building
-  static const String volcAppId = 'YOUR_VOLC_APP_ID';
-  static const String volcAccessKeyId = 'YOUR_VOLC_ACCESS_KEY_ID';
-  static const String volcSecretAccessKey = 'YOUR_VOLC_SECRET_ACCESS_KEY';
+  // Volcano Engine ASR (inactive - app stores voice locally, no transcription needed)
+  static const String volcAppId = '';
+  static const String volcAccessKeyId = '';
+  static const String volcSecretAccessKey = '';
   static const String volcASRHost = 'openspeech.bytedance.com';
   static const String volcASRPath = '/api/v1/asr';
 

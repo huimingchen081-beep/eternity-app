@@ -42,3 +42,44 @@ workflows:
     artifacts:
       - build/app/outputs/flutter-apk/app-release.apk
       - build/app/outputs/bundle/release/app-release.aab
+
+  ios-build:
+    name: iOS 编译 & TestFlight
+    max_build_duration: 60
+    environment:
+      flutter: 3.44.4
+      xcode: latest
+      ios_signing:
+        distribution_type: app_store
+        bundle_identifier: com.huiqin.eternity
+      groups:
+        - app_store
+    scripts:
+      - name: Flutter 依赖
+        script: flutter pub get
+
+      - name: 构建并导出 IPA
+        script: |
+          set -e
+          flutter build ipa \
+            --release \
+            --export-options-plist ios/ExportOptions.plist
+          echo "✅ IPA 构建完成！"
+          ls -lh build/ios/ipa/
+
+      - name: 上传 App Store Connect
+        script: |
+          set -e
+          echo "=== 开始上传 IPA 到 App Store Connect ==="
+
+          app-store-connect publish \
+            --path build/ios/ipa/eternity.ipa \
+            --key-id "$APP_STORE_CONNECT_KEY_IDENTIFIER" \
+            --issuer-id "$APP_STORE_CONNECT_ISSUER_ID" \
+            --private-key @env:APP_STORE_CONNECT_PRIVATE_KEY
+
+          echo ""
+          echo "✅ IPA 上传成功！请在 TestFlight 页面手动选择 Build 提交审核。"
+
+    artifacts:
+      - "build/ios/ipa/*.ipa"

@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../providers/app_state.dart';
@@ -15,61 +16,87 @@ class HomePage extends StatefulWidget {
 }
 
 class _HomePageState extends State<HomePage> {
-  final GlobalKey _universeKey = GlobalKey();
+  final GlobalKey<UniverseCanvasState> _universeKey = GlobalKey<UniverseCanvasState>();
   String? _animatingPlanetId;
   bool _showLightBeam = false;
   Offset? _beamStart;
   Offset? _beamEnd;
+  Timer? _highlightTimer;
+
+  @override
+  void dispose() {
+    _highlightTimer?.cancel();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
     return Consumer<AppState>(
       builder: (context, appState, _) {
-        return Scaffold(
-          backgroundColor: const Color(0xFF050510),
-          body: Stack(
-            children: [
-              // Universe canvas
+        // Use Stack directly (no nested Scaffold) so bottom nav bar space is handled by MainShell
+        return Stack(
+          fit: StackFit.expand,
+          children: [
+            // Universe canvas - full screen
+            Positioned.fill(
+              child: UniverseCanvas(
+                key: _universeKey,
+                planets: appState.planets,
+                highlightedPlanetId: _animatingPlanetId,
+                screenSize: MediaQuery.of(context).size,
+                onPlanetTapWithId: (planetId) {
+                  _navigateToPlanet(appState, planetId);
+                  return '';
+                },
+              ),
+            ),
+
+            // Top bar
+            Positioned(
+              top: 0,
+              left: 0,
+              right: 0,
+              child: _buildTopBar(appState),
+            ),
+
+            // Light beam animation overlay
+            if (_showLightBeam &&
+                _beamStart != null &&
+                _beamEnd != null)
               Positioned.fill(
-                child: UniverseCanvas(
-                  key: _universeKey,
-                  planets: appState.planets,
-                  highlightedPlanetId: _animatingPlanetId,
-                  screenSize: MediaQuery.of(context).size,
-                  onPlanetTapWithId: (planetId) {
-                    _navigateToPlanet(appState, planetId);
-                    return '';
-                  },
+                child: IgnorePointer(
+                  child: LightBeamAnimation(
+                    startPoint: _beamStart!,
+                    endPoint: _beamEnd!,
+                    onComplete: () {
+                      setState(() {
+                        _showLightBeam = false;
+                        // Keep the highlight pulse on the newly lit planet for 3 more seconds
+                        // so the user can clearly see which planet was just lit
+                      });
+                      appState.finishLightBeamAnimation();
+
+                      // Clear highlight after 3 seconds
+                      _highlightTimer?.cancel();
+                      _highlightTimer = Timer(const Duration(seconds: 3), () {
+                        if (mounted) {
+                          setState(() {
+                            _animatingPlanetId = null;
+                          });
+                        }
+                      });
+                    },
+                  ),
                 ),
               ),
 
-              // Top bar
-              _buildTopBar(appState),
-
-              // Light beam animation overlay
-              if (_showLightBeam &&
-                  _beamStart != null &&
-                  _beamEnd != null)
-                Positioned.fill(
-                  child: IgnorePointer(
-                    child: LightBeamAnimation(
-                      startPoint: _beamStart!,
-                      endPoint: _beamEnd!,
-                      onComplete: () {
-                        setState(() {
-                          _showLightBeam = false;
-                          _animatingPlanetId = null;
-                        });
-                      },
-                    ),
-                  ),
-                ),
-
-              // Bottom input bar
-              Positioned(
-                left: 0,
-                right: 0,
-                bottom: 0,
+            // Bottom input bar (above bottom nav)
+            Positioned(
+              left: 0,
+              right: 0,
+              bottom: 0,
+              child: SafeArea(
+                top: false,
                 child: InputBar(
                   language: appState.language,
                   hasPurchased: appState.hasPurchased,
@@ -80,11 +107,10 @@ class _HomePageState extends State<HomePage> {
                       _handleVideoSubmit(appState, path),
                   onVoiceSubmit: (path, transcript, lang) =>
                       _handleVoiceSubmit(appState, path, transcript, lang),
-                  onPurchaseTap: () => _handlePurchase(appState),
                 ),
               ),
-            ],
-          ),
+            ),
+          ],
         );
       },
     );
@@ -97,15 +123,29 @@ class _HomePageState extends State<HomePage> {
         child: Row(
           mainAxisAlignment: MainAxisAlignment.end,
           children: [
-            // App name
-            Text(
-              _getAppName(appState.language),
-              style: const TextStyle(
-                color: Colors.white54,
-                fontSize: 16,
-                fontWeight: FontWeight.w600,
-                letterSpacing: 2,
-              ),
+            // App name + warm hint
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  _getAppName(appState.language),
+                  style: const TextStyle(
+                    color: Colors.white54,
+                    fontSize: 16,
+                    fontWeight: FontWeight.w600,
+                    letterSpacing: 2,
+                  ),
+                ),
+                Text(
+                  _getHintText(appState.language),
+                  style: TextStyle(
+                    color: Colors.white.withValues(alpha: 0.25),
+                    fontSize: 10,
+                    fontStyle: FontStyle.italic,
+                  ),
+                ),
+              ],
             ),
             const Spacer(),
             // Entry counter
@@ -133,13 +173,16 @@ class _HomePageState extends State<HomePage> {
                 );
               },
               child: Container(
-                width: 36,
-                height: 36,
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
                 decoration: BoxDecoration(
-                  shape: BoxShape.circle,
                   color: Colors.white.withValues(alpha: 0.08),
+                  borderRadius: BorderRadius.circular(12),
                 ),
-                child: const Icon(Icons.language, color: Colors.white54, size: 20),
+                child: Text(
+                  _getLangLabel(appState.language),
+                  style: const TextStyle(color: Colors.white54, fontSize: 12),
+                ),
               ),
             ),
           ],
@@ -150,10 +193,28 @@ class _HomePageState extends State<HomePage> {
 
   String _getAppName(String lang) {
     return switch (lang) {
-      'zh' => '永生',
+      'zh' => '记忆永恒',
       'ja' => '永遠',
       'ko' => '영생',
       _ => 'Eternity',
+    };
+  }
+
+  String _getHintText(String lang) {
+    return switch (lang) {
+      'zh' => '✨ 点击发亮的星球，查看你的点点滴滴',
+      'ja' => '✨ 光る星をタップすると、思い出が見られます',
+      'ko' => '✨ 반짝이는 행성을 눌러 추억을 확인하세요',
+      _ => '✨ Tap a glowing planet to revisit your memories',
+    };
+  }
+
+  String _getLangLabel(String lang) {
+    return switch (lang) {
+      'zh' => '语言切换',
+      'ja' => '言語切替',
+      'ko' => '언어 전환',
+      _ => 'Language',
     };
   }
 
@@ -167,72 +228,101 @@ class _HomePageState extends State<HomePage> {
   }
 
   // --- Content submission handlers ---
-  void _handleTextSubmit(AppState appState, String text) async {
-    final entry = await appState.saveTextMemo(text);
-    if (entry != null) {
-      _triggerLightBeam(appState, entry.planetId);
+  Future<void> _handleTextSubmit(AppState appState, String text) async {
+    try {
+      final entry = await appState.saveTextMemo(text);
+      if (entry != null) {
+        _triggerLightBeam(appState, entry.planetId);
+      } else {
+        _showError('保存失败，请重试');
+      }
+    } catch (e) {
+      _showError('保存失败: $e');
     }
   }
 
-  void _handleImageSubmit(AppState appState, List<String> paths) async {
-    final entry = await appState.saveImageMemo(paths);
-    if (entry != null) {
-      _triggerLightBeam(appState, entry.planetId);
+  Future<void> _handleImageSubmit(AppState appState, List<String> paths) async {
+    try {
+      final entry = await appState.saveImageMemo(paths);
+      if (entry != null) {
+        _triggerLightBeam(appState, entry.planetId);
+      } else {
+        _showError('图片保存失败');
+      }
+    } catch (e) {
+      _showError('图片保存失败: $e');
     }
   }
 
-  void _handleVideoSubmit(AppState appState, String path) async {
-    final entry = await appState.saveVideoMemo(path);
-    if (entry != null) {
-      _triggerLightBeam(appState, entry.planetId);
+  Future<void> _handleVideoSubmit(AppState appState, String path) async {
+    try {
+      final entry = await appState.saveVideoMemo(path);
+      if (entry != null) {
+        _triggerLightBeam(appState, entry.planetId);
+      } else {
+        _showError('视频保存失败');
+      }
+    } catch (e) {
+      _showError('视频保存失败: $e');
     }
   }
 
-  void _handleVoiceSubmit(
+  Future<void> _handleVoiceSubmit(
       AppState appState, String path, String transcript, String lang) async {
-    final entry = await appState.saveVoiceMemo(path, transcript, lang);
-    if (entry != null) {
-      _triggerLightBeam(appState, entry.planetId);
+    try {
+      final entry = await appState.saveVoiceMemo(path, transcript, lang);
+      if (entry != null) {
+        _triggerLightBeam(appState, entry.planetId);
+      } else {
+        _showError('语音保存失败');
+      }
+    } catch (e) {
+      _showError('语音保存失败: $e');
     }
+  }
+
+  void _showError(String msg) {
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(msg),
+        duration: const Duration(seconds: 2),
+        backgroundColor: Colors.red.shade800,
+      ),
+    );
   }
 
   void _triggerLightBeam(AppState appState, String planetId) {
-    // Calculate beam path from bottom center to planet's screen position
-    final screenSize = MediaQuery.of(context).size;
-    final startPos = Offset(screenSize.width / 2, screenSize.height - 60);
+    // Center camera on the planet so the user can actually see it light up
+    _universeKey.currentState?.centerOnPlanet(planetId);
 
-    // Find planet screen position
-    final planet = appState.planets.firstWhere((p) => p.id == planetId);
-    final universeCanvas =
-        _universeKey.currentContext?.findRenderObject() as RenderBox?;
-    Offset endPos = Offset(screenSize.width / 2, screenSize.height / 3);
+    // Wait one frame for Consumer rebuild to complete (planet lit state applied),
+    // then show the light beam animation
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
 
-    if (universeCanvas != null) {
-      final planetGlobalOffset =
-          _getPlanetScreenPos(planet, screenSize, universeCanvas);
-      endPos = planetGlobalOffset;
-    }
+      final screenSize = MediaQuery.of(context).size;
+      final startPos = Offset(screenSize.width / 2, screenSize.height - 60);
 
-    setState(() {
-      _animatingPlanetId = planetId;
-      _beamStart = startPos;
-      _beamEnd = endPos;
-      _showLightBeam = true;
+      // Get actual planet screen position from canvas (now centered)
+      final canvasState = _universeKey.currentState;
+      Offset endPos;
+      if (canvasState != null) {
+        endPos = canvasState.getPlanetScreenPos(planetId);
+      } else {
+        endPos = Offset(screenSize.width / 2, screenSize.height / 3);
+      }
+
+      setState(() {
+        _animatingPlanetId = planetId;
+        _beamStart = startPos;
+        _beamEnd = endPos;
+        _showLightBeam = true;
+      });
     });
-  }
 
-  Offset _getPlanetScreenPos(
-      dynamic planet, Size screenSize, RenderBox universeBox) {
-    // Estimate position based on planet coordinates
-    // This is simplified - in production we'd get it from the canvas
-    final scale = 1.0; // Default zoom
-    final offsetX = 0.0;
-    final offsetY = 0.0;
-
-    return Offset(
-      screenSize.width / 2 + (planet.x + offsetX) * scale,
-      screenSize.height / 2 + (planet.y + offsetY) * scale,
-    );
+    // Also trigger the app-level animation state
+    appState.startLightBeamAnimation(planetId);
   }
 
   void _navigateToPlanet(AppState appState, String planetId) {
@@ -247,35 +337,4 @@ class _HomePageState extends State<HomePage> {
     );
   }
 
-  void _handlePurchase(AppState appState) async {
-    showDialog(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        backgroundColor: const Color(0xEE0D0D2A),
-        title: const Text('Unlock Eternity',
-            style: TextStyle(color: Colors.white)),
-        content: const Text(
-          'One-time purchase. Record your memories forever in the universe.',
-          style: TextStyle(color: Colors.white70),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx),
-            child: const Text('Cancel', style: TextStyle(color: Colors.white54)),
-          ),
-          ElevatedButton(
-            onPressed: () async {
-              Navigator.pop(ctx);
-              await appState.unlockFullVersion();
-            },
-            style: ElevatedButton.styleFrom(
-              backgroundColor: const Color(0xFF4FC3F7),
-            ),
-            child: const Text('Buy \$1.99',
-                style: TextStyle(color: Color(0xFF050510))),
-          ),
-        ],
-      ),
-    );
-  }
 }
