@@ -1,48 +1,4 @@
 workflows:
-  android-build:
-    name: Android 编译
-    max_build_duration: 30
-    environment:
-      flutter: 3.44.4
-      vars:
-        STORE_PASSWORD: Eternity2026!
-        KEY_PASSWORD: Eternity2026!
-        KEY_ALIAS: eternity
-    scripts:
-      - name: Flutter 依赖
-        script: flutter pub get
-
-      - name: 解码签名密钥 + 生成 key.properties
-        script: |
-          set -e
-          mkdir -p android/app
-          base64 -d android/secrets/upload-keystore.jks.base64 > android/app/upload-keystore.jks
-          cat > android/key.properties << EOF
-          storePassword=$STORE_PASSWORD
-          keyPassword=$KEY_PASSWORD
-          keyAlias=$KEY_ALIAS
-          storeFile=../app/upload-keystore.jks
-          EOF
-          echo "✅ 密钥解码完成"
-
-      - name: 构建 Release APK
-        script: |
-          set -e
-          flutter build apk --release
-          echo "✅ APK 构建完成！"
-          ls -lh build/app/outputs/flutter-apk/
-
-      - name: 构建 AAB (Google Play)
-        script: |
-          set -e
-          flutter build appbundle --release
-          echo "✅ AAB 构建完成！"
-          ls -lh build/app/outputs/bundle/release/
-
-    artifacts:
-      - build/app/outputs/flutter-apk/app-release.apk
-      - build/app/outputs/bundle/release/app-release.aab
-
   ios-build:
     name: iOS 编译 & TestFlight
     max_build_duration: 60
