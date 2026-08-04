@@ -67,14 +67,45 @@ workflows:
           set -e
           echo "=== 开始上传 IPA 到 App Store Connect ==="
 
+          # 检查 app-store-connect 命令是否存在
+          if ! command -v app-store-connect &> /dev/null; then
+            echo "❌ app-store-connect 命令未找到"
+            echo "IPA 已构建完成，可以在 artifacts 中下载手动上传"
+            exit 1
+          fi
+
+          # 动态查找 IPA 文件
+          echo "=== 查找 IPA 文件 ==="
+          find build/ios -name "*.ipa" -type f 2>/dev/null || true
+          IPA_FILE=$(find build/ios -name "*.ipa" -type f 2>/dev/null | head -1)
+          if [ -z "$IPA_FILE" ]; then
+            echo "❌ 未找到任何 .ipa 文件！"
+            echo "build/ios 目录内容："
+            find build/ios -type f 2>/dev/null | head -20
+            exit 1
+          fi
+          echo "找到 IPA: $IPA_FILE"
+          ls -lh "$IPA_FILE"
+
+          # Key ID 和 Issuer ID 硬编码
+          KEY_ID="32JV5CQL98"
+          ISSUER_ID="c9f20ee8-40c5-4d57-8786-0c9ac016e269"
+
+          echo "Key ID: $KEY_ID"
+          echo "Issuer ID: $ISSUER_ID"
+
+          # Private Key: 从仓库文件读取到环境变量
+          export API_KEY_CONTENT=$(cat ios/secrets/api_key.p8)
+
+          # 上传
           app-store-connect publish \
-            --path build/ios/ipa/eternity.ipa \
-            --key-id "$APP_STORE_CONNECT_KEY_IDENTIFIER" \
-            --issuer-id "$APP_STORE_CONNECT_ISSUER_ID" \
-            --private-key @env:APP_STORE_CONNECT_PRIVATE_KEY
+            --path "$IPA_FILE" \
+            --key-id "$KEY_ID" \
+            --issuer-id "$ISSUER_ID" \
+            --private-key @env:API_KEY_CONTENT
 
           echo ""
-          echo "✅ IPA 上传成功！请在 TestFlight 页面手动选择 Build 提交审核。"
+          echo "✅ IPA 上传成功！请在 TestFlight 页面等待 Apple 处理（通常 15-30 分钟）。"
 
     artifacts:
       - "build/ios/ipa/*.ipa"
