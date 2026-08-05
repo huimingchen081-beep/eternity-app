@@ -1,7 +1,7 @@
 name: eternity
 description: "记忆永恒 - 在浩瀚宇宙中记录你的每一个珍贵瞬间"
 publish_to: 'none'
-version: 1.0.0+3
+version: 1.0.0+4
 
 environment:
   sdk: ^3.12.2
