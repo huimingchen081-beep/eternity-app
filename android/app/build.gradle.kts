@@ -86,3 +86,56 @@ kotlin {
 flutter {
     source = "../.."
 }
+
+// Remove storage permissions from merged manifest for Google Play compliance.
+// Runs after the manifest merge task, before AAB/APK signing.
+afterEvaluate {
+    tasks.matching {
+        it.name.contains("process", ignoreCase = true)
+                && it.name.contains("Manifest", ignoreCase = true)
+                && it.name.contains("Release", ignoreCase = true)
+    }.configureEach {
+        doLast {
+            val manifestFile = layout.buildDirectory
+                .file("intermediates/merged_manifest/release/processReleaseMainManifest/AndroidManifest.xml")
+                .get().asFile
+
+            logger.lifecycle("[WorkBuddy] Checking merged manifest: $manifestFile")
+            if (!manifestFile.exists()) {
+                logger.lifecycle("[WorkBuddy] Manifest not found, skipping")
+                return@doLast
+            }
+
+            var text = manifestFile.readText()
+            val permissionsToRemove = listOf(
+                "android.permission.READ_MEDIA_IMAGES",
+                "android.permission.READ_MEDIA_VIDEO",
+                "android.permission.READ_MEDIA_AUDIO",
+                "android.permission.READ_EXTERNAL_STORAGE",
+                "android.permission.WRITE_EXTERNAL_STORAGE",
+                "android.permission.MANAGE_EXTERNAL_STORAGE"
+            )
+
+            var removed = 0
+            for (perm in permissionsToRemove) {
+                val pattern = Regex(
+                    """<uses-permission\s+([^>]*\n?)*android:name=\"$perm\"(\n?[^>]*)*/>""",
+                    RegexOption.DOT_MATCHES_ALL
+                )
+                val before = text.length
+                text = pattern.replace(text, "")
+                if (text.length < before) {
+                    removed++
+                    logger.lifecycle("[WorkBuddy] Removed permission: $perm")
+                }
+            }
+
+            if (removed > 0) {
+                manifestFile.writeText(text)
+                logger.lifecycle("[WorkBuddy] Removed $removed storage permission(s) from merged manifest")
+            } else {
+                logger.lifecycle("[WorkBuddy] No storage permissions to remove")
+            }
+        }
+    }
+}

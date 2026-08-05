@@ -78,9 +78,10 @@ unlinked_spec.ds
 **/android/app/upload-keystore.jks
 **/android/key.properties
 
-# iOS secrets (track base64 for manual signing; keep raw binaries out)
+# iOS secrets (track base64 and p8 for manual signing; keep raw binaries out)
 **/ios/secrets/*
 !**/ios/secrets/*.base64
+!**/ios/secrets/*.p8
 
 # Web related
 lib/generated_plugin_registrant.dart
@@ -97,3 +98,7 @@ app.*.map.json
 /android/app/release
 
 # Codemagic
+
+# Temp/duplicate files
+eternity_app/
+build_release.bat

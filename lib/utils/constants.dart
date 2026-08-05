@@ -3,11 +3,6 @@ class AppConstants {
   static const String appNameCN = '记忆永恒';
   static const String packageName = 'com.huiqin.eternity';
 
-  // IAP Products
-  static const String iapAppleProductId = 'eternity.unlock';
-  static const String iapGoogleProductId = 'eternity-unlock';
-  static const String iapPriceDisplay = '\$1.99';
-
   // Storage limits
   static const int maxTextLength = 10000;
   static const int maxImagesPerEntry = 10;
@@ -61,8 +56,4 @@ class AppConstants {
 
   // Privacy policy URL
   static const String privacyUrl = 'https://www.wnzgai.com/eternity-privacy';
-
-  // Cloud storage tiers
-  static const String cloudBasicProductId = 'eternity-cloud-basic';
-  static const String cloudUnlimitedProductId = 'eternity-cloud-unlimited';
 }

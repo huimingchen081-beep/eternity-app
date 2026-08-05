@@ -363,15 +363,6 @@ class _InputBarState extends State<InputBar> {
     );
   }
 
-  void _showPurchaseHint() {
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('购买完整版可添加图片、视频和语音'),
-        duration: Duration(seconds: 2),
-      ),
-    );
-  }
-
   String get _hintText {
     switch (widget.language) {
       case 'zh':
@@ -401,9 +392,8 @@ class _InputBarState extends State<InputBar> {
 class _ActionButton extends StatelessWidget {
   final IconData icon;
   final VoidCallback onTap;
-  final Color? color;
 
-  const _ActionButton({required this.icon, required this.onTap, this.color});
+  const _ActionButton({required this.icon, required this.onTap});
 
   @override
   Widget build(BuildContext context) {
@@ -418,7 +408,7 @@ class _ActionButton extends StatelessWidget {
             shape: BoxShape.circle,
             color: Colors.white.withValues(alpha: 0.08),
           ),
-          child: Icon(icon, color: color ?? Colors.white70, size: 22),
+          child: Icon(icon, color: Colors.white70, size: 22),
         ),
       ),
     );
