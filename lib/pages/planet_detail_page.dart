@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:video_player/video_player.dart';
 import '../models/memory_entry.dart';
 import '../providers/app_state.dart';
+import '../widgets/responsive_wrapper.dart';
 
 class PlanetDetailPage extends StatefulWidget {
   final String planetId;
@@ -69,16 +70,19 @@ class _PlanetDetailPageState extends State<PlanetDetailPage> {
       );
     }
 
-    return ListView.builder(
-      padding: const EdgeInsets.all(16),
-      itemCount: _entries!.length,
-      itemBuilder: (context, index) {
-        return _EntryCard(
-          entry: _entries![index],
-          language: widget.appState.language,
-          onDelete: () => _deleteEntry(_entries![index]),
-        );
-      },
+    return ResponsiveWidth(
+      maxWidth: 600,
+      child: ListView.builder(
+        padding: const EdgeInsets.all(16),
+        itemCount: _entries!.length,
+        itemBuilder: (context, index) {
+          return _EntryCard(
+            entry: _entries![index],
+            language: widget.appState.language,
+            onDelete: () => _deleteEntry(_entries![index]),
+          );
+        },
+      ),
     );
   }
 

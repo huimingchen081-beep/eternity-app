@@ -13,9 +13,9 @@ if exist "build" (
 )
 echo Done.
 echo.
-echo Step 2: Building AAB (5-10 minutes)...
+echo Step 2: Building AAB (optimized, 2-5 minutes)...
 echo.
-call D:\flutter\bin\flutter.bat build appbundle --release --no-tree-shake-icons
+call D:\flutter\bin\flutter.bat build appbundle --release --no-tree-shake-icons --no-shrink
 if %ERRORLEVEL% == 0 (
     echo ========================================
     echo  BUILD SUCCESS!

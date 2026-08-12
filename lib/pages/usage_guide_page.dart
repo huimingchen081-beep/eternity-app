@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../widgets/responsive_wrapper.dart';
 
 class UsageGuidePage extends StatelessWidget {
   final String language;
@@ -17,23 +18,26 @@ class UsageGuidePage extends StatelessWidget {
         centerTitle: true,
         iconTheme: const IconThemeData(color: Colors.white70),
       ),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(20),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // Hero quote
-            _buildHeroSection(),
-            const SizedBox(height: 28),
+      body: ResponsiveWidth(
+        maxWidth: 500,
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.all(20),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // Hero quote
+              _buildHeroSection(),
+              const SizedBox(height: 28),
 
-            // Steps
-            ..._buildSteps(context),
-            const SizedBox(height: 28),
+              // Steps
+              ..._buildSteps(context),
+              const SizedBox(height: 28),
 
-            // Closing words
-            _buildClosingWords(),
-            const SizedBox(height: 40),
-          ],
+              // Closing words
+              _buildClosingWords(),
+              const SizedBox(height: 40),
+            ],
+          ),
         ),
       ),
     );

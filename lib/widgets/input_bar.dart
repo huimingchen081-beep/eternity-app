@@ -6,6 +6,7 @@ import 'package:path_provider/path_provider.dart';
 import 'package:uuid/uuid.dart';
 import 'package:permission_handler/permission_handler.dart';
 import '../services/asr_service.dart';
+import 'responsive_wrapper.dart';
 
 class InputBar extends StatefulWidget {
   final String language;
@@ -207,15 +208,18 @@ class _InputBarState extends State<InputBar> {
         top: 8,
         bottom: 8,
       ),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          // DEBUG: Purchase prompt hidden for testing
-          // if (!widget.hasPurchased)
-          //   Padding(...),
-          // Input area
-          _showRecordingUI ? _buildRecordingUI() : _buildInputRow(),
-        ],
+      child: ResponsiveWidth(
+        maxWidth: 520,
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            // DEBUG: Purchase prompt hidden for testing
+            // if (!widget.hasPurchased)
+            //   Padding(...),
+            // Input area
+            _showRecordingUI ? _buildRecordingUI() : _buildInputRow(),
+          ],
+        ),
       ),
     );
   }
