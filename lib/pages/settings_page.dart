@@ -3,7 +3,6 @@ import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import '../providers/app_state.dart';
 import '../utils/constants.dart';
-import '../widgets/responsive_wrapper.dart';
 import 'usage_guide_page.dart';
 
 class SettingsPage extends StatelessWidget {
@@ -24,11 +23,9 @@ class SettingsPage extends StatelessWidget {
             centerTitle: true,
             iconTheme: const IconThemeData(color: Colors.white70),
           ),
-          body: ResponsiveWidth(
-            maxWidth: 500,
-            child: ListView(
-              padding: const EdgeInsets.all(16),
-              children: [
+          body: ListView(
+            padding: const EdgeInsets.all(16),
+            children: [
               // App info
               _buildSectionTitle(
                   appState.language == 'zh' ? '应用信息' : 'App Info'),
@@ -118,7 +115,6 @@ class SettingsPage extends StatelessWidget {
               ]),
             ],
           ),
-          ),
         );
       },
     );
@@ -173,7 +169,7 @@ class SettingsPage extends StatelessWidget {
       builder: (ctx) => AlertDialog(
         backgroundColor: const Color(0xFF0D0D2A),
         insetPadding: EdgeInsets.symmetric(
-          horizontal: ResponsiveWidth.isTablet(context) ? 200 : 40,
+          horizontal: 40,
           vertical: 24,
         ),
         shape: RoundedRectangleBorder(

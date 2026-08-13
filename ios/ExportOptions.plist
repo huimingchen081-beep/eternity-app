@@ -3,12 +3,15 @@
 <plist version="1.0">
 <dict>
     <key>method</key>
-    <string>app-store</string>
-    <key>uploadBitcode</key>
-    <false/>
-    <key>compileBitcode</key>
-    <false/>
-    <key>uploadSymbols</key>
-    <true/>
+    <string>app-store-connect</string>
+    <key>teamID</key>
+    <string>4ZSSBDC2TM</string>
+    <key>signingStyle</key>
+    <string>manual</string>
+    <key>provisioningProfiles</key>
+    <dict>
+        <key>com.huiqin.eternity</key>
+        <string>Eternity App Store</string>
+    </dict>
 </dict>
 </plist>

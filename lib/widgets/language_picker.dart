@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import '../utils/constants.dart';
-import 'responsive_wrapper.dart';
 
 class LanguagePicker extends StatelessWidget {
   final String currentLanguage;
@@ -19,15 +18,12 @@ class LanguagePicker extends StatelessWidget {
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
-      builder: (_) => ResponsiveWidth(
-        maxWidth: 500,
-        child: LanguagePicker(
-          currentLanguage: currentLang,
-          onLanguageChanged: (lang) {
-            onChanged(lang);
-            Navigator.pop(context);
-          },
-        ),
+      builder: (_) => LanguagePicker(
+        currentLanguage: currentLang,
+        onLanguageChanged: (lang) {
+          onChanged(lang);
+          Navigator.pop(context);
+        },
       ),
     );
   }

@@ -6,7 +6,6 @@ import '../widgets/universe_canvas.dart';
 import '../widgets/light_beam_animation.dart';
 import '../widgets/input_bar.dart';
 import '../widgets/language_picker.dart';
-import '../widgets/responsive_wrapper.dart';
 import 'planet_detail_page.dart';
 
 class HomePage extends StatefulWidget {
@@ -119,77 +118,74 @@ class _HomePageState extends State<HomePage> {
 
   Widget _buildTopBar(AppState appState) {
     return SafeArea(
-      child: ResponsiveWidth(
-        maxWidth: 600,
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.end,
-            children: [
-              // App name + warm hint
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Text(
-                    _getAppName(appState.language),
-                    style: const TextStyle(
-                      color: Colors.white54,
-                      fontSize: 16,
-                      fontWeight: FontWeight.w600,
-                      letterSpacing: 2,
-                    ),
-                  ),
-                  Text(
-                    _getHintText(appState.language),
-                    style: TextStyle(
-                      color: Colors.white.withValues(alpha: 0.25),
-                      fontSize: 10,
-                      fontStyle: FontStyle.italic,
-                    ),
-                  ),
-                ],
-              ),
-              const Spacer(),
-              // Entry counter
-              if (appState.hasPurchased)
-                Container(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                  decoration: BoxDecoration(
-                    color: Colors.white.withValues(alpha: 0.08),
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: Text(
-                    '${appState.litCount} ${_getPlanetWord(appState.language)}',
-                    style: const TextStyle(color: Colors.white38, fontSize: 12),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.end,
+          children: [
+            // App name + warm hint
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  _getAppName(appState.language),
+                  style: const TextStyle(
+                    color: Colors.white54,
+                    fontSize: 16,
+                    fontWeight: FontWeight.w600,
+                    letterSpacing: 2,
                   ),
                 ),
-              const SizedBox(width: 8),
-              // Language picker
-              GestureDetector(
-                onTap: () {
-                  LanguagePicker.show(
-                    context,
-                    appState.language,
-                    (lang) => appState.setLanguage(lang),
-                  );
-                },
-                child: Container(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                  decoration: BoxDecoration(
-                    color: Colors.white.withValues(alpha: 0.08),
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: Text(
-                    _getLangLabel(appState.language),
-                    style: const TextStyle(color: Colors.white54, fontSize: 12),
+                Text(
+                  _getHintText(appState.language),
+                  style: TextStyle(
+                    color: Colors.white.withValues(alpha: 0.25),
+                    fontSize: 10,
+                    fontStyle: FontStyle.italic,
                   ),
                 ),
+              ],
+            ),
+            const Spacer(),
+            // Entry counter
+            if (appState.hasPurchased)
+              Container(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                decoration: BoxDecoration(
+                  color: Colors.white.withValues(alpha: 0.08),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Text(
+                  '${appState.litCount} ${_getPlanetWord(appState.language)}',
+                  style: const TextStyle(color: Colors.white38, fontSize: 12),
+                ),
               ),
-            ],
-          ),
+            const SizedBox(width: 8),
+            // Language picker
+            GestureDetector(
+              onTap: () {
+                LanguagePicker.show(
+                  context,
+                  appState.language,
+                  (lang) => appState.setLanguage(lang),
+                );
+              },
+              child: Container(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                decoration: BoxDecoration(
+                  color: Colors.white.withValues(alpha: 0.08),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Text(
+                  _getLangLabel(appState.language),
+                  style: const TextStyle(color: Colors.white54, fontSize: 12),
+                ),
+              ),
+            ),
+          ],
         ),
       ),
     );

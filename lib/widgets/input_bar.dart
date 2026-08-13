@@ -6,7 +6,6 @@ import 'package:path_provider/path_provider.dart';
 import 'package:uuid/uuid.dart';
 import 'package:permission_handler/permission_handler.dart';
 import '../services/asr_service.dart';
-import 'responsive_wrapper.dart';
 
 class InputBar extends StatefulWidget {
   final String language;
@@ -70,7 +69,6 @@ class _InputBarState extends State<InputBar> {
     final text = _textController.text.trim();
     if (text.isEmpty) return;
 
-    // Clear input immediately for responsive feel, but keep the text in case save fails
     final savedText = text;
     _textController.clear();
     _focusNode.unfocus();
@@ -78,7 +76,6 @@ class _InputBarState extends State<InputBar> {
     try {
       await widget.onTextSubmit(savedText);
     } catch (e) {
-      // Restore text if save failed
       _textController.text = savedText;
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -144,7 +141,6 @@ class _InputBarState extends State<InputBar> {
       path: path,
     );
 
-    // Timer for display
     _recordingTimer();
   }
 
@@ -174,7 +170,6 @@ class _InputBarState extends State<InputBar> {
       return;
     }
 
-    // Transcribe with ASR
     String transcript = '';
     try {
       transcript = await AsrService.transcribe(path, widget.language);
@@ -186,6 +181,91 @@ class _InputBarState extends State<InputBar> {
     });
 
     widget.onVoiceSubmit(path, transcript, widget.language);
+  }
+
+  void _showAttachMenu() {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: const Color(0xEE0D0D2A),
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (_) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const SizedBox(height: 8),
+            Container(
+              width: 40,
+              height: 4,
+              decoration: BoxDecoration(
+                color: Colors.white24,
+                borderRadius: BorderRadius.circular(2),
+              ),
+            ),
+            const SizedBox(height: 20),
+            ListTile(
+              leading: Container(
+                width: 44,
+                height: 44,
+                decoration: BoxDecoration(
+                  color: Colors.white.withValues(alpha: 0.08),
+                  borderRadius: BorderRadius.circular(22),
+                ),
+                child: const Icon(Icons.image_outlined, color: Color(0xFF4FC3F7), size: 22),
+              ),
+              title: Text(
+                widget.language == 'zh' ? '选择图片' : 'Photos',
+                style: const TextStyle(color: Colors.white),
+              ),
+              onTap: () {
+                Navigator.pop(context);
+                _pickImages();
+              },
+            ),
+            ListTile(
+              leading: Container(
+                width: 44,
+                height: 44,
+                decoration: BoxDecoration(
+                  color: Colors.white.withValues(alpha: 0.08),
+                  borderRadius: BorderRadius.circular(22),
+                ),
+                child: const Icon(Icons.videocam_outlined, color: Color(0xFF4FC3F7), size: 22),
+              ),
+              title: Text(
+                widget.language == 'zh' ? '选择视频' : 'Video',
+                style: const TextStyle(color: Colors.white),
+              ),
+              onTap: () {
+                Navigator.pop(context);
+                _pickVideo();
+              },
+            ),
+            ListTile(
+              leading: Container(
+                width: 44,
+                height: 44,
+                decoration: BoxDecoration(
+                  color: Colors.white.withValues(alpha: 0.08),
+                  borderRadius: BorderRadius.circular(22),
+                ),
+                child: const Icon(Icons.mic_none, color: Color(0xFF4FC3F7), size: 22),
+              ),
+              title: Text(
+                widget.language == 'zh' ? '语音录制' : 'Voice Record',
+                style: const TextStyle(color: Colors.white),
+              ),
+              onTap: () {
+                Navigator.pop(context);
+                _startRecording();
+              },
+            ),
+            const SizedBox(height: 16),
+          ],
+        ),
+      ),
+    );
   }
 
   @override
@@ -202,24 +282,17 @@ class _InputBarState extends State<InputBar> {
           ],
         ),
       ),
-      padding: const EdgeInsets.only(
+      padding: EdgeInsets.only(
         left: 12,
         right: 12,
         top: 8,
-        bottom: 8,
+        bottom: MediaQuery.of(context).padding.bottom + 8,
       ),
-      child: ResponsiveWidth(
-        maxWidth: 520,
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            // DEBUG: Purchase prompt hidden for testing
-            // if (!widget.hasPurchased)
-            //   Padding(...),
-            // Input area
-            _showRecordingUI ? _buildRecordingUI() : _buildInputRow(),
-          ],
-        ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          _showRecordingUI ? _buildRecordingUI() : _buildInputRow(),
+        ],
       ),
     );
   }
@@ -227,22 +300,22 @@ class _InputBarState extends State<InputBar> {
   Widget _buildInputRow() {
     return Row(
       children: [
-        // Upload buttons - always show for testing
-        _ActionButton(
-          icon: Icons.image_outlined,
-          onTap: _pickImages,
-        ),
-        _ActionButton(
-          icon: Icons.videocam_outlined,
-          onTap: _pickVideo,
-        ),
-        _ActionButton(
-          icon: Icons.mic_none,
-          onTap: _startRecording,
+        // Single "+" button opens attach menu
+        GestureDetector(
+          onTap: _showAttachMenu,
+          child: Container(
+            width: 40,
+            height: 40,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              color: Colors.white.withValues(alpha: 0.08),
+            ),
+            child: const Icon(Icons.add, color: Colors.white70, size: 22),
+          ),
         ),
         const SizedBox(width: 8),
 
-        // Text input - always available
+        // Text input
         Expanded(
           child: Container(
             decoration: BoxDecoration(
@@ -390,31 +463,5 @@ class _InputBarState extends State<InputBar> {
       default:
         return 'Capture this moment...';
     }
-  }
-}
-
-class _ActionButton extends StatelessWidget {
-  final IconData icon;
-  final VoidCallback onTap;
-
-  const _ActionButton({required this.icon, required this.onTap});
-
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 4),
-      child: GestureDetector(
-        onTap: onTap,
-        child: Container(
-          width: 40,
-          height: 40,
-          decoration: BoxDecoration(
-            shape: BoxShape.circle,
-            color: Colors.white.withValues(alpha: 0.08),
-          ),
-          child: Icon(icon, color: Colors.white70, size: 22),
-        ),
-      ),
-    );
   }
 }

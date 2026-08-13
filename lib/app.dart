@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'pages/home_page.dart';
 import 'pages/settings_page.dart';
-import 'widgets/responsive_wrapper.dart';
 
 class EternityApp extends StatelessWidget {
   const EternityApp({super.key});
@@ -57,29 +56,26 @@ class _MainShellState extends State<MainShell> {
           ),
         ),
         child: SafeArea(
-          child: ResponsiveWidth(
-            maxWidth: 500,
-            child: BottomNavigationBar(
-              currentIndex: _currentIndex,
-              onTap: (index) => setState(() => _currentIndex = index),
-              backgroundColor: Colors.transparent,
-              elevation: 0,
-              selectedItemColor: const Color(0xFF4FC3F7),
-              unselectedItemColor: Colors.white38,
-              type: BottomNavigationBarType.fixed,
-              items: const [
-                BottomNavigationBarItem(
-                  icon: Icon(Icons.home_outlined),
-                  activeIcon: Icon(Icons.home),
-                  label: '宇宙',
-                ),
-                BottomNavigationBarItem(
-                  icon: Icon(Icons.person_outline),
-                  activeIcon: Icon(Icons.person),
-                  label: '我的',
-                ),
-              ],
-            ),
+          child: BottomNavigationBar(
+            currentIndex: _currentIndex,
+            onTap: (index) => setState(() => _currentIndex = index),
+            backgroundColor: Colors.transparent,
+            elevation: 0,
+            selectedItemColor: const Color(0xFF4FC3F7),
+            unselectedItemColor: Colors.white38,
+            type: BottomNavigationBarType.fixed,
+            items: const [
+              BottomNavigationBarItem(
+                icon: Icon(Icons.home_outlined),
+                activeIcon: Icon(Icons.home),
+                label: '宇宙',
+              ),
+              BottomNavigationBarItem(
+                icon: Icon(Icons.person_outline),
+                activeIcon: Icon(Icons.person),
+                label: '我的',
+              ),
+            ],
           ),
         ),
       ),
